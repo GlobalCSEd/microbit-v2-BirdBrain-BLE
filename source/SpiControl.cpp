@@ -148,45 +148,6 @@ uint8_t readFirmwareVersion()
     // Returning early to spoof the device type
     return FINCH_SAMD_ID;
 
-    // // Wait up to 5 ms for another SPI command to complete
-    // uint8_t timeOut = 0;
-    // while(spiActive && timeOut < 5) {
-    //     fiber_sleep(1);
-    //     timeOut++;
-    // }
-    // if(!spiActive)
-    // {
-    //     spiActive = true;
-
-    //     uBit.io.P16.setDigitalValue(0);
-    //     NRFX_DELAY_US(SS_WAIT);
-    //     uint8_t readBuffer[4];
-    //     readBuffer[0] = spi.write(0x8C); // Special command to read firmware/hardware version
-    //     for both Finch and HB NRFX_DELAY_US(WAIT_BETWEEN_BYTES); for(int i = 1; i < 3; i++)
-    //     {
-    //         readBuffer[i] = spi.write(0xFF);
-    //         NRFX_DELAY_US(WAIT_BETWEEN_BYTES);
-    //     }
-    //     readBuffer[3] = spi.write(0xFF);
-    //     NRFX_DELAY_US(SS_WAIT);
-    //     uBit.io.P16.setDigitalValue(1);
-    //     NRFX_DELAY_MS(1); // wait after reading firmware
-
-    //     spiActive = false;
-
-    //     if(readBuffer[0] == FINCH_SAMD_ID)
-    //         return FINCH_SAMD_ID;
-    //     else if((readBuffer[3] == HUMMINGBIT_SAMD_ID) || (readBuffer[3] ==
-    //     (HUMMINGBIT_SAMD_ID-1)) || (readBuffer[3] == (HUMMINGBIT_SAMD_ID-2)))
-    //         return HUMMINGBIT_SAMD_ID;
-    //     else if((readBuffer[0] + readBuffer[1] + readBuffer[2] + readBuffer[3]) == 0) // Bit
-    //     hokey, but if all bytes are 0, it's a micro:bit since SPI isn't responding
-    //         return MICROBIT_SAMD_ID;
-    //     else
-    //         return UNIDENTIFIED_DEV; // can be any number that isn't the FINCH and HUMMINGBIT
-    //         IDs
-    // }
-    // return UNIDENTIFIED_DEV;
 }
 
 // Function for debugging use only
