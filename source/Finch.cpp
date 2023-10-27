@@ -5,6 +5,9 @@
 #include "Finch.h"
 #include "BLESerial.h"
 
+#define PULSE_WIDTH 20
+#define MAX_WIDTH 1023
+
 int32_t leftEncoder = 0;  // Holds the running value of the left encoder
 int32_t rightEncoder = 0; // Holds the running value of the right encoder
 
@@ -253,6 +256,53 @@ void arrangeFinchSensors(uint8_t (&spi_sensors_only)[FINCH_SPI_SENSOR_LENGTH],
     sensor_vals[12] = rightEncoder & 0x0000FF;
 }
 
+/// @brief Converts from commands meant for the Finch 2.0's SPI motors into a value usable by a PWM
+/// motor
+/// @return PWM signal signal that corresponds with SPI motor command
+uint32_t convertToPWM()
+{
+    return 0;
+}
+
+/// @brief Gets motor ticks from the command array
+/// @param command Command array
+/// @param startIndex Index of the first byte of motor ticks
+/// @return Total motor ticks
+uint32_t extractMotorTicks(const uint8_t *command, int startIndex)
+{
+    // Essentially just converts a size 3 array of 8 bit integers to a 24 bit integer
+    uint32_t motorTicks = 0;
+    motorTicks = (((uint32_t)command[startIndex]) << 16) & 0x00FF0000;
+    motorTicks |= (((uint32_t)command[startIndex + 1]) << 8) & 0x0000FF00;
+    motorTicks |= (((uint32_t)command[startIndex + 2])) & 0x000000FF;
+
+    return motorTicks;
+}
+
+/// @brief Sets periods of the pins to PULSE_WIDTH
+/// @param leftServo 
+/// @param rightServo 
+/// @return whether or not they were properly set
+bool setPeriods(NRF52Pin *leftServo, NRF52Pin *rightServo)
+{
+    return (leftServo->setAnalogPeriod(PULSE_WIDTH) == DEVICE_OK) &&
+           (rightServo->setAnalogPeriod(PULSE_WIDTH) == DEVICE_OK);
+}
+
+/// @brief Pulses the motors for the allotted amount of time for the given value, in ms.
+/// @param leftServo
+/// @param rightServo
+/// @param msLeft Milliseconds that the left motor is pulsed
+/// @param msRight Milliseconds that the right motor is pulsed
+/// @return Whether or not the servos were pulsed
+bool pulse(NRF52Pin *leftServo, NRF52Pin *rightServo, uint16_t msLeft, uint16_t msRight)
+{
+
+    return setPeriods(leftServo, rightServo) &&
+           (leftServo->setAnalogValue(MAX_WIDTH * msLeft / PULSE_WIDTH) == DEVICE_OK) &&
+           (rightServo->setAnalogValue(MAX_WIDTH * msRight / PULSE_WIDTH == DEVICE_OK));
+}
+
 /************************************************************************/
 // Update movement flags as they are useful in getting a relative encoder tick count
 // Convert 32 bit number into a 24 bit value and send it to SAMD
@@ -261,21 +311,22 @@ void arrangeFinchSensors(uint8_t (&spi_sensors_only)[FINCH_SPI_SENSOR_LENGTH],
 void moveMotor(uint8_t *currentCommand)
 {
     // Need to parse the incoming command and convert that command to something understandable to
-    // the microbit through its pins Using uBit as defined in main.cpp, use the pins that
+    // the microbit through its pins Using uBit as defined in main.cpp, use the pins that are found
+    // in roversa/programming
+    // Conversion should be done from whatever the finch motors are to PWM
+
     uint16_t leftMotorSpeed = 0;
     uint32_t leftMotorTicks = 0;
     uint16_t rightMotorSpeed = 0;
     uint32_t rightMotorTicks = 0;
+
     leftMotorSpeed = currentCommand[2];
     rightMotorSpeed = currentCommand[6];
-    // Left Motor ticks
-    leftMotorTicks = (((uint32_t)currentCommand[3]) << 16) & 0x00FF0000;
-    leftMotorTicks |= (((uint32_t)currentCommand[4]) << 8) & 0x0000FF00;
-    leftMotorTicks |= (((uint32_t)currentCommand[5])) & 0x000000FF;
-    // Right motor ticks
-    rightMotorTicks = (((uint32_t)currentCommand[7]) << 16) & 0x00FF0000;
-    rightMotorTicks |= (((uint32_t)currentCommand[8]) << 8) & 0x0000FF00;
-    rightMotorTicks |= (((uint32_t)currentCommand[9])) & 0x000000FF;
+
+    leftMotorTicks = extractMotorTicks(currentCommand, 3);
+    rightMotorTicks = extractMotorTicks(currentCommand, 7);
+
+    pulse(&uBit.io.P1,&uBit.io.P2,(uint16_t)leftMotorTicks % 1024, (uint16_t)rightMotorTicks % 1024);
 
     // nrf_delay_ms(1); Not sure why we did this, but it was in the V1 firmware
     //
